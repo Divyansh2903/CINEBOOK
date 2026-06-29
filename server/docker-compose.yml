@@ -4,18 +4,43 @@ services:
     container_name: cinebook-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_USER: cinebook
-      POSTGRES_PASSWORD: cinebook
-      POSTGRES_DB: cinebook
+      POSTGRES_USER: ${POSTGRES_USER:-cinebook}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-cinebook}
+      POSTGRES_DB: ${POSTGRES_DB:-cinebook}
+    # Bind to localhost only on the droplet; the API talks to it over the
+    # internal compose network, so the port need not be world-reachable.
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - cinebook_pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U cinebook"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-cinebook}"]
       interval: 5s
       timeout: 5s
       retries: 10
+
+  server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: cinebook-server
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      # Reach Postgres over the compose network via the service name.
+      DATABASE_URL: postgresql://${POSTGRES_USER:-cinebook}:${POSTGRES_PASSWORD:-cinebook}@postgres:5432/${POSTGRES_DB:-cinebook}?schema=public
+      JWT_SECRET: ${JWT_SECRET}
+      ACCESS_TOKEN_TTL: ${ACCESS_TOKEN_TTL:-15m}
+      REFRESH_TOKEN_TTL_DAYS: ${REFRESH_TOKEN_TTL_DAYS:-30}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      CHAT_MODEL: ${CHAT_MODEL:-claude-sonnet-4-6}
+      CORS_ORIGIN: ${CORS_ORIGIN}
+    ports:
+      - "4000:4000"
 
 volumes:
   cinebook_pgdata:
