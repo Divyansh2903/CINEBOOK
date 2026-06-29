@@ -6,9 +6,9 @@ import { chat, getConversation, listConversations } from "./chat.service.js";
 
 export async function chatRoutes(app: FastifyInstance): Promise<void> {
   app.post("/chat", { preHandler: [app.authenticate] }, async (req, reply) => {
-    const rl = await rateLimiter.hit(`chat:${req.user.sub}`, 30, 60_000);
-    if (!rl.allowed) {
-      const retryAfterSeconds = Math.ceil(rl.retryAfterMs / 1000);
+    const rateLimit = await rateLimiter.hit(`chat:${req.user.sub}`, 30, 60_000);
+    if (!rateLimit.allowed) {
+      const retryAfterSeconds = Math.ceil(rateLimit.retryAfterMs / 1000);
       return reply.code(429).send({
         error: "TooManyRequests",
         message: `You're sending messages too fast. Try again in ${retryAfterSeconds}s.`,

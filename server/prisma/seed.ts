@@ -57,7 +57,7 @@ async function main() {
   await prisma.otpCode.deleteMany();
   await prisma.user.deleteMany();
 
-  // --- Genres ---
+  //Genres
   console.log("Seeding genres…");
   const genreNames = ["Action", "Comedy", "Drama", "Horror", "Sci-Fi", "Thriller", "Romance", "Animation"];
   const genres = await Promise.all(
@@ -65,7 +65,7 @@ async function main() {
   );
   const genre = (n: string) => genres.find((g) => g.name === n)!;
 
-  // --- Movies ---
+  //Movies
   console.log("Seeding movies…");
   const movieDefs = [
     {
@@ -147,7 +147,7 @@ async function main() {
     movies.push(movie);
   }
 
-  // --- Chains / theatres / screens / seats ---
+  //Chains / theatres / screens / seats
   console.log("Seeding theatres, screens, seats…");
   const chainDefs = [
     { name: "PVR", theatres: [{ name: "PVR Phoenix", location: "Whitefield", address: "Phoenix Marketcity, Whitefield" }, { name: "PVR Forum", location: "Koramangala", address: "The Forum, Koramangala" }] },
@@ -181,7 +181,7 @@ async function main() {
     }
   }
 
-  // --- Shows: each movie across a rotating set of screens, next 7 days, 4 slots/day ---
+  //Shows: each movie across a rotating set of screens, next 7 days, 4 slots/day
   console.log("Seeding shows…");
   const slots = [10, 13, 17, 21]; // hours
   let showCount = 0;
@@ -205,7 +205,7 @@ async function main() {
     }
   }
 
-  // --- Promo codes ---
+  //Promo codes
   console.log("Seeding promo codes…");
   await prisma.promoCode.createMany({
     data: [
@@ -215,7 +215,7 @@ async function main() {
     ],
   });
 
-  // --- Users (auth lands in Phase 2; phones are the login identifier) ---
+  //Users (phones are the login identifier)
   console.log("Seeding users…");
   const admin = await prisma.user.create({ data: { name: "Admin User", phone: "+919000000001", role: "ADMIN" } });
   const manager = await prisma.user.create({ data: { name: "Hall Manager", phone: "+919000000002", role: "HALL_MANAGER" } });

@@ -2,7 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { notFound } from "../../lib/errors.js";
 import { parse } from "../../lib/validate.js";
-import * as svc from "./catalog.service.js";
+import * as catalogService from "./catalog.service.js";
 
 const ageRating = z.enum(["U", "UA", "A"]);
 const format = z.enum(["TWO_D", "THREE_D"]);
@@ -28,43 +28,43 @@ export async function catalogRoutes(app: FastifyInstance): Promise<void> {
       }),
       req.query,
     );
-    return svc.listMovies(q);
+    return catalogService.listMovies(q);
   });
 
-  app.get("/movies/trending", () => svc.listTrending());
-  app.get("/movies/upcoming", () => svc.listUpcoming());
+  app.get("/movies/trending", () => catalogService.listTrending());
+  app.get("/movies/upcoming", () => catalogService.listUpcoming());
 
   app.get("/movies/:id", async (req) => {
     const { id } = parse(z.object({ id: z.string() }), req.params);
-    const movie = await svc.getMovie(id);
+    const movie = await catalogService.getMovie(id);
     if (!movie) throw notFound("Movie not found");
     return movie;
   });
 
   app.get("/movies/:id/reviews", async (req) => {
     const { id } = parse(z.object({ id: z.string() }), req.params);
-    return svc.getReviews(id);
+    return catalogService.getReviews(id);
   });
 
   app.get("/movies/:id/similar", async (req) => {
     const { id } = parse(z.object({ id: z.string() }), req.params);
-    return svc.suggestSimilar(id);
+    return catalogService.suggestSimilar(id);
   });
 
-  app.get("/genres", () => svc.listGenres());
-  app.get("/languages", () => svc.listLanguages());
+  app.get("/genres", () => catalogService.listGenres());
+  app.get("/languages", () => catalogService.listLanguages());
 
   app.get("/theatres", async (req) => {
     const q = parse(
       z.object({ chain: z.string().optional(), location: z.string().optional(), movieId: z.string().optional() }),
       req.query,
     );
-    return svc.listTheatres(q);
+    return catalogService.listTheatres(q);
   });
 
   app.get("/screens/:id", async (req) => {
     const { id } = parse(z.object({ id: z.string() }), req.params);
-    const screen = await svc.getScreen(id);
+    const screen = await catalogService.getScreen(id);
     if (!screen) throw notFound("Screen not found");
     return screen;
   });

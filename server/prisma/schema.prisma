@@ -8,9 +8,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ----------------------------------------------------------------------------
-// Enums
-// ----------------------------------------------------------------------------
 enum Role {
   CUSTOMER
   HALL_MANAGER
@@ -56,9 +53,7 @@ enum PaymentStatus {
   REFUNDED
 }
 
-// ----------------------------------------------------------------------------
-// Identity & auth
-// ----------------------------------------------------------------------------
+
 model User {
   id          String   @id @default(cuid())
   name        String
@@ -101,9 +96,7 @@ model RefreshToken {
   @@index([userId])
 }
 
-// ----------------------------------------------------------------------------
-// Catalog
-// ----------------------------------------------------------------------------
+//Catalog
 model Genre {
   id     String       @id @default(cuid())
   name   String       @unique
@@ -157,9 +150,7 @@ model Review {
   @@index([movieId])
 }
 
-// ----------------------------------------------------------------------------
-// Venues
-// ----------------------------------------------------------------------------
+//Venues
 model TheatreChain {
   id       String    @id @default(cuid())
   name     String    @unique // PVR, INOX, Cinepolis
@@ -219,9 +210,7 @@ model Seat {
   @@index([screenId])
 }
 
-// ----------------------------------------------------------------------------
-// Scheduling
-// ----------------------------------------------------------------------------
+//Scheduling
 model Show {
   id        String   @id @default(cuid())
   movie     Movie    @relation(fields: [movieId], references: [id])
@@ -240,9 +229,7 @@ model Show {
   @@index([movieId, startsAt])
 }
 
-// ----------------------------------------------------------------------------
-// Booking, holds, payment
-// ----------------------------------------------------------------------------
+//Booking, holds, payment
 model SeatHold {
   id        String   @id @default(cuid())
   show      Show     @relation(fields: [showId], references: [id], onDelete: Cascade)
@@ -316,9 +303,7 @@ model PromoCode {
   createdAt    DateTime @default(now())
 }
 
-// ----------------------------------------------------------------------------
-// Chatbot persistence
-// ----------------------------------------------------------------------------
+//Chatbot persistence
 model Conversation {
   id        String   @id @default(cuid())
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -345,9 +330,7 @@ model Message {
   @@index([conversationId, createdAt])
 }
 
-// ----------------------------------------------------------------------------
-// Observability
-// ----------------------------------------------------------------------------
+//Observability
 model ToolCallLog {
   id             String        @id @default(cuid())
   conversation   Conversation? @relation(fields: [conversationId], references: [id], onDelete: SetNull)

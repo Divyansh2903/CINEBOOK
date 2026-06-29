@@ -23,9 +23,9 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     }
     const { phone } = body.data;
 
-    const rl = await rateLimiter.hit(`otp:${phone}`, 5, HOUR_MS);
-    if (!rl.allowed) {
-      const retryAfterSeconds = Math.ceil(rl.retryAfterMs / 1000);
+    const rateLimit = await rateLimiter.hit(`otp:${phone}`, 5, HOUR_MS);
+    if (!rateLimit.allowed) {
+      const retryAfterSeconds = Math.ceil(rateLimit.retryAfterMs / 1000);
       return reply.code(429).send({
         error: "TooManyRequests",
         message: `Too many verification requests. Try again in ${retryAfterSeconds}s.`,

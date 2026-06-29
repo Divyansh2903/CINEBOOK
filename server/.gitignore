@@ -1,3 +1,9 @@
 node_modules
 dist
 .env
+
+# Compiled output from prisma/*.ts (seed runs via tsx, no build needed)
+prisma/**/*.js
+prisma/**/*.js.map
+prisma/**/*.d.ts
+prisma/**/*.d.ts.map

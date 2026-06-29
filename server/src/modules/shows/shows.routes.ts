@@ -2,7 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { notFound } from "../../lib/errors.js";
 import { parse } from "../../lib/validate.js";
-import * as svc from "./shows.service.js";
+import * as showsService from "./shows.service.js";
 
 const screenType = z.enum(["STANDARD", "IMAX", "FOUR_DX", "DOLBY_ATMOS"]);
 
@@ -19,12 +19,12 @@ export async function showsRoutes(app: FastifyInstance): Promise<void> {
       }),
       req.query,
     );
-    return svc.listShows(q);
+    return showsService.listShows(q);
   });
 
   app.get("/shows/:id", async (req) => {
     const { id } = parse(z.object({ id: z.string() }), req.params);
-    const show = await svc.getShow(id);
+    const show = await showsService.getShow(id);
     if (!show) throw notFound("Show not found");
     return show;
   });
@@ -39,7 +39,7 @@ export async function showsRoutes(app: FastifyInstance): Promise<void> {
     } catch {
       /* anonymous browsing is allowed */
     }
-    const availability = await svc.getAvailability(id, userId);
+    const availability = await showsService.getAvailability(id, userId);
     if (!availability) throw notFound("Show not found");
     return availability;
   });

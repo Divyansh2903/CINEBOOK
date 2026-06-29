@@ -10,6 +10,8 @@ import { catalogRoutes } from "./modules/catalog/catalog.routes.js";
 import { showsRoutes } from "./modules/shows/shows.routes.js";
 import { holdsRoutes } from "./modules/holds/holds.routes.js";
 import { bookingsRoutes } from "./modules/bookings/bookings.routes.js";
+import { schedulingRoutes } from "./modules/shows/scheduling.routes.js";
+import { adminRoutes } from "./modules/admin/admin.routes.js";
 import { chatRoutes } from "./chatbot/chat.routes.js";
 import { AppError } from "./lib/errors.js";
 
@@ -48,7 +50,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   });
 
   app.get("/health", async () => {
-    await prisma.$queryRaw`SELECT 1`;
+    await prisma.$queryRaw`SELECT 1`; //checks if db is reachable
     return { status: "ok", time: new Date().toISOString() };
   });
 
@@ -60,6 +62,8 @@ export async function buildApp(): Promise<FastifyInstance> {
   await app.register(showsRoutes);
   await app.register(holdsRoutes);
   await app.register(bookingsRoutes);
+  await app.register(schedulingRoutes);
+  await app.register(adminRoutes);
   await app.register(chatRoutes);
 
   return app;
