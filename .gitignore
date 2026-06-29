@@ -1,0 +1,145 @@
+# ==========================================================================
+# CineBook — consolidated root .gitignore
+# Covers: server/ (Node + TypeScript + Prisma), admin/ (React + Vite + TS),
+# cinebook_app/ (Flutter, incl. android/ & ios/ platform folders).
+# ==========================================================================
+
+# --------------------------------------------------------------------------
+# OS / Editor (global)
+# --------------------------------------------------------------------------
+.DS_Store
+.idea/
+*.iml
+*.ipr
+*.iws
+.history
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+*.swp
+.vscode/*
+!.vscode/extensions.json
+
+# --------------------------------------------------------------------------
+# Logs
+# --------------------------------------------------------------------------
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# --------------------------------------------------------------------------
+# Node / TypeScript — server/ and admin/
+# --------------------------------------------------------------------------
+node_modules
+dist
+dist-ssr
+build
+*.local
+*.tsbuildinfo
+
+# Environment & secrets
+.env
+.env.*
+!.env.example
+
+# Prisma (server/) — keep schema & migrations, ignore generated/local artifacts
+server/prisma/*.db
+server/prisma/*.db-journal
+
+# --------------------------------------------------------------------------
+# Flutter / Dart — cinebook_app/
+# --------------------------------------------------------------------------
+*.class
+*.pyc
+.atom/
+.build/
+.buildlog/
+.svn/
+.swiftpm/
+migrate_working_dir/
+
+**/doc/api/
+**/ios/Flutter/.last_build_id
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+/coverage/
+
+# Symbolication / obfuscation
+app.*.symbols
+app.*.map.json
+
+# Android Studio build artifacts
+/android/app/debug
+/android/app/profile
+/android/app/release
+
+# --------------------------------------------------------------------------
+# Flutter Android — cinebook_app/android/
+# --------------------------------------------------------------------------
+cinebook_app/android/gradle-wrapper.jar
+cinebook_app/android/.gradle
+cinebook_app/android/captures/
+cinebook_app/android/gradlew
+cinebook_app/android/gradlew.bat
+cinebook_app/android/local.properties
+cinebook_app/android/GeneratedPluginRegistrant.java
+cinebook_app/android/.cxx/
+
+# Remember to never publicly share your keystore.
+# See https://flutter.dev/to/reference-keystore
+cinebook_app/android/key.properties
+**/*.keystore
+**/*.jks
+
+# --------------------------------------------------------------------------
+# Flutter iOS — cinebook_app/ios/
+# --------------------------------------------------------------------------
+**/dgph
+*.mode1v3
+*.mode2v3
+*.moved-aside
+*.pbxuser
+*.perspectivev3
+**/*sync/
+.sconsign.dblite
+.tags*
+**/.vagrant/
+**/DerivedData/
+Icon?
+**/Pods/
+**/.symlinks/
+profile
+xcuserdata
+**/.generated/
+cinebook_app/ios/Flutter/App.framework
+cinebook_app/ios/Flutter/Flutter.framework
+cinebook_app/ios/Flutter/Flutter.podspec
+cinebook_app/ios/Flutter/Generated.xcconfig
+cinebook_app/ios/Flutter/ephemeral/
+cinebook_app/ios/Flutter/app.flx
+cinebook_app/ios/Flutter/app.zip
+cinebook_app/ios/Flutter/flutter_assets/
+cinebook_app/ios/Flutter/flutter_export_environment.sh
+cinebook_app/ios/ServiceDefinitions.json
+cinebook_app/ios/Runner/GeneratedPluginRegistrant.*
+
+# Exceptions to above rules.
+!default.mode1v3
+!default.mode2v3
+!default.pbxuser
+!default.perspectivev3
+
+# --------------------------------------------------------------------------
+# Docs
+# --------------------------------------------------------------------------
+Docs/
+cinebook_ui_design/
