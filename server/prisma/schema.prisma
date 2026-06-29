@@ -1,0 +1,379 @@
+// CineBook data model
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ----------------------------------------------------------------------------
+// Enums
+// ----------------------------------------------------------------------------
+enum Role {
+  CUSTOMER
+  HALL_MANAGER
+  ADMIN
+}
+
+enum AgeRating {
+  U
+  UA
+  A
+}
+
+enum Format {
+  TWO_D // 2D
+  THREE_D // 3D
+}
+
+enum ScreenType {
+  STANDARD
+  IMAX
+  FOUR_DX // 4DX
+  DOLBY_ATMOS
+}
+
+enum SeatCategory {
+  FRONT
+  STANDARD
+  PREMIUM
+  RECLINER
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  REFUNDED
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  REFUNDED
+}
+
+// ----------------------------------------------------------------------------
+// Identity & auth
+// ----------------------------------------------------------------------------
+model User {
+  id          String   @id @default(cuid())
+  name        String
+  phone       String   @unique
+  role        Role     @default(CUSTOMER)
+  enabled     Boolean  @default(true)
+  preferences Json     @default("{}") // seat type, time-of-day, location, language
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  managedScreens ScreenManager[]
+  bookings       Booking[]
+  conversations  Conversation[]
+  refreshTokens  RefreshToken[]
+  adminActions   AdminActivityLog[]
+
+  @@index([role])
+}
+
+model OtpCode {
+  id        String   @id @default(cuid())
+  phone     String
+  codeHash  String
+  expiresAt DateTime
+  consumed  Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([phone, createdAt])
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  tokenHash String   @unique
+  expiresAt DateTime
+  revoked   Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+// ----------------------------------------------------------------------------
+// Catalog
+// ----------------------------------------------------------------------------
+model Genre {
+  id     String       @id @default(cuid())
+  name   String       @unique
+  movies MovieGenre[]
+}
+
+model Movie {
+  id          String      @id @default(cuid())
+  title       String
+  description String
+  runtimeMin  Int
+  releaseDate DateTime
+  posterUrl   String?
+  backdropUrl String?
+  trailerUrl  String?
+  ageRating   AgeRating
+  language    String
+  format      Format      @default(TWO_D)
+  cast        Json        @default("[]") // [{ name, role, photoUrl }]
+  trending    Boolean     @default(false)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  genres  MovieGenre[]
+  reviews Review[]
+  shows   Show[]
+
+  @@index([releaseDate])
+  @@index([language])
+  @@index([ageRating])
+}
+
+model MovieGenre {
+  movie   Movie  @relation(fields: [movieId], references: [id], onDelete: Cascade)
+  movieId String
+  genre   Genre  @relation(fields: [genreId], references: [id], onDelete: Cascade)
+  genreId String
+
+  @@id([movieId, genreId])
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  movie     Movie    @relation(fields: [movieId], references: [id], onDelete: Cascade)
+  movieId   String
+  author    String
+  rating    Int // 1..5
+  text      String
+  createdAt DateTime @default(now())
+
+  @@index([movieId])
+}
+
+// ----------------------------------------------------------------------------
+// Venues
+// ----------------------------------------------------------------------------
+model TheatreChain {
+  id       String    @id @default(cuid())
+  name     String    @unique // PVR, INOX, Cinepolis
+  theatres Theatre[]
+}
+
+model Theatre {
+  id       String       @id @default(cuid())
+  chain    TheatreChain @relation(fields: [chainId], references: [id])
+  chainId  String
+  name     String
+  location String // city / area, e.g. "Koramangala"
+  address  String
+  lat      Float?
+  lng      Float?
+  screens  Screen[]
+
+  @@index([location])
+}
+
+model Screen {
+  id         String     @id @default(cuid())
+  theatre    Theatre    @relation(fields: [theatreId], references: [id], onDelete: Cascade)
+  theatreId  String
+  name       String // "Screen 1", "Audi 3"
+  screenType ScreenType @default(STANDARD)
+  equipment  Json       @default("[]")
+  capacity   Int
+
+  seats    Seat[]
+  shows    Show[]
+  managers ScreenManager[]
+}
+
+model ScreenManager {
+  screen   Screen @relation(fields: [screenId], references: [id], onDelete: Cascade)
+  screenId String
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId   String
+
+  @@id([screenId, userId])
+}
+
+model Seat {
+  id                  String       @id @default(cuid())
+  screen              Screen       @relation(fields: [screenId], references: [id], onDelete: Cascade)
+  screenId            String
+  row                 String // "A", "B"
+  number              Int
+  category            SeatCategory
+  basePriceMultiplier Float        @default(1.0)
+
+  bookedSeats BookedSeat[]
+  holds       SeatHold[]
+
+  @@unique([screenId, row, number])
+  @@index([screenId])
+}
+
+// ----------------------------------------------------------------------------
+// Scheduling
+// ----------------------------------------------------------------------------
+model Show {
+  id        String   @id @default(cuid())
+  movie     Movie    @relation(fields: [movieId], references: [id])
+  movieId   String
+  screen    Screen   @relation(fields: [screenId], references: [id], onDelete: Cascade)
+  screenId  String
+  startsAt  DateTime
+  endsAt    DateTime // derived: startsAt + runtime
+  basePrice Int // effective seat price = basePrice * seat.basePriceMultiplier
+  createdAt DateTime @default(now())
+
+  bookings Booking[]
+  holds    SeatHold[]
+
+  @@index([screenId, startsAt])
+  @@index([movieId, startsAt])
+}
+
+// ----------------------------------------------------------------------------
+// Booking, holds, payment
+// ----------------------------------------------------------------------------
+model SeatHold {
+  id        String   @id @default(cuid())
+  show      Show     @relation(fields: [showId], references: [id], onDelete: Cascade)
+  showId    String
+  seat      Seat     @relation(fields: [seatId], references: [id], onDelete: Cascade)
+  seatId    String
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@unique([showId, seatId]) // a seat can be held by only one user per show
+  @@index([expiresAt])
+}
+
+model Booking {
+  id         String        @id @default(cuid())
+  bookingRef String        @unique // public, human-friendly id
+  user       User          @relation(fields: [userId], references: [id])
+  userId     String
+  show       Show          @relation(fields: [showId], references: [id])
+  showId     String
+  status     BookingStatus @default(PENDING)
+  totalCost  Int
+  promoCode  String?
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+
+  seats    BookedSeat[]
+  payments Payment[]
+
+  @@index([userId])
+  @@index([showId])
+}
+
+model BookedSeat {
+  id        String  @id @default(cuid())
+  booking   Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  bookingId String
+  seat      Seat    @relation(fields: [seatId], references: [id])
+  seatId    String
+  pricePaid Int
+
+  @@unique([bookingId, seatId])
+}
+
+model Payment {
+  id            String        @id @default(cuid())
+  booking       Booking       @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  bookingId     String
+  amount        Int
+  status        PaymentStatus @default(PENDING)
+  transactionId String?       @unique
+  cardLast4     String?
+  attempts      Int           @default(0)
+  refundedAt    DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@index([bookingId])
+}
+
+model PromoCode {
+  id           String   @id @default(cuid())
+  code         String   @unique
+  description  String
+  percentOff   Int // 0..100
+  active       Boolean  @default(true)
+  maxUses      Int?
+  uses         Int      @default(0)
+  validUntil   DateTime?
+  createdAt    DateTime @default(now())
+}
+
+// ----------------------------------------------------------------------------
+// Chatbot persistence
+// ----------------------------------------------------------------------------
+model Conversation {
+  id        String   @id @default(cuid())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  title     String?
+  state     Json     @default("{}") // running session-state (prefs, in-flight ids)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  messages  Message[]
+  toolCalls ToolCallLog[]
+
+  @@index([userId])
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  conversationId String
+  role           String // user | assistant | system
+  content        Json // raw content blocks for replay
+  createdAt      DateTime     @default(now())
+
+  @@index([conversationId, createdAt])
+}
+
+// ----------------------------------------------------------------------------
+// Observability
+// ----------------------------------------------------------------------------
+model ToolCallLog {
+  id             String        @id @default(cuid())
+  conversation   Conversation? @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+  conversationId String?
+  traceId        String
+  actorId        String?
+  tool           String
+  input          Json
+  success        Boolean
+  errorType      String?
+  durationMs     Int
+  createdAt      DateTime      @default(now())
+
+  @@index([traceId])
+  @@index([tool])
+}
+
+model AdminActivityLog {
+  id        String   @id @default(cuid())
+  actor     User     @relation(fields: [actorId], references: [id])
+  actorId   String
+  action    String
+  entity    String
+  entityId  String?
+  metadata  Json     @default("{}")
+  createdAt DateTime @default(now())
+
+  @@index([actorId, createdAt])
+}
