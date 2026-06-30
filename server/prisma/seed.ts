@@ -71,6 +71,7 @@ async function main() {
     {
       title: "Dune: Part Two", runtimeMin: 166, ageRating: "UA" as const, language: "English",
       format: "THREE_D" as const, trending: true, genres: ["Sci-Fi", "Action", "Drama"],
+      poster: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQqbB6WlBNzaWgKp163R4Yp9touM5JWFi86vJ7MU7S9cXCYAFls7FSpb_8&s=10",
       description: "Paul Atreides unites with the Fremen to wage war against House Harkonnen.",
       cast: [
         { name: "Timothée Chalamet", role: "Paul Atreides" },
@@ -85,6 +86,7 @@ async function main() {
     {
       title: "Oppenheimer", runtimeMin: 180, ageRating: "A" as const, language: "English",
       format: "TWO_D" as const, trending: true, genres: ["Drama", "Thriller"],
+      poster: "https://upload.wikimedia.org/wikipedia/en/thumb/4/4a/Oppenheimer_%28film%29.jpg/250px-Oppenheimer_%28film%29.jpg",
       description: "The story of J. Robert Oppenheimer and the creation of the atomic bomb.",
       cast: [
         { name: "Cillian Murphy", role: "J. Robert Oppenheimer" },
@@ -95,6 +97,7 @@ async function main() {
     {
       title: "Inside Out 2", runtimeMin: 96, ageRating: "U" as const, language: "English",
       format: "THREE_D" as const, trending: true, genres: ["Animation", "Comedy"],
+      poster: "https://upload.wikimedia.org/wikipedia/en/thumb/f/f7/Inside_Out_2_poster.jpg/250px-Inside_Out_2_poster.jpg",
       description: "Riley's emotions face a new challenge as she enters her teenage years.",
       cast: [{ name: "Amy Poehler", role: "Joy" }, { name: "Maya Hawke", role: "Anxiety" }],
       reviews: [{ author: "Sara", rating: 4, text: "Heartfelt and very funny." }],
@@ -102,6 +105,7 @@ async function main() {
     {
       title: "Kalki 2898 AD", runtimeMin: 181, ageRating: "UA" as const, language: "Hindi",
       format: "THREE_D" as const, trending: false, genres: ["Sci-Fi", "Action"],
+      poster: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSvEZRTqbdeuGRREc87fyn9cO3ZqA9XXX65kgEZmJ3xXekA7ZhkvGA4pYg&s=10",
       description: "A futuristic epic blending mythology and science fiction.",
       cast: [{ name: "Prabhas", role: "Bhairava" }, { name: "Deepika Padukone", role: "Sumathi" }],
       reviews: [{ author: "Imran", rating: 4, text: "Visually spectacular." }],
@@ -109,6 +113,7 @@ async function main() {
     {
       title: "A Quiet Place: Day One", runtimeMin: 99, ageRating: "UA" as const, language: "English",
       format: "TWO_D" as const, trending: false, genres: ["Horror", "Thriller"],
+      poster: "https://resizing.flixster.com/or3jxjzmcmu88rC-mcksfO642IU=/ems.cHJkLWVtcy1hc3NldHMvbW92aWVzLzNmYjhmOGMzLWU1YjctNGEyNS04OTJhLWY4YmIwMjNmZmFiMC53ZWJw",
       description: "Experience the day the world went quiet.",
       cast: [{ name: "Lupita Nyong'o", role: "Sam" }],
       reviews: [{ author: "Neha", rating: 4, text: "Tense from start to finish." }],
@@ -116,6 +121,7 @@ async function main() {
     {
       title: "The Fall Guy", runtimeMin: 126, ageRating: "UA" as const, language: "English",
       format: "TWO_D" as const, trending: false, genres: ["Action", "Comedy", "Romance"],
+      poster: "https://m.media-amazon.com/images/I/81i6YQRYY6L._AC_UF1000,1000_QL80_.jpg",
       description: "A stuntman is drawn into a dangerous plot while chasing a missing star.",
       cast: [{ name: "Ryan Gosling", role: "Colt Seavers" }, { name: "Emily Blunt", role: "Jody" }],
       reviews: [{ author: "Kabir", rating: 3, text: "Fun, breezy, forgettable." }],
@@ -137,8 +143,8 @@ async function main() {
         format: m.format,
         trending: m.trending,
         cast: m.cast,
-        posterUrl: `https://picsum.photos/seed/${slug(m.title)}-p/400/600`,
-        backdropUrl: `https://picsum.photos/seed/${slug(m.title)}-b/1280/640`,
+        posterUrl: m.poster ?? `https://picsum.photos/seed/${slug(m.title)}-p/400/600`,
+        backdropUrl: m.poster ?? `https://picsum.photos/seed/${slug(m.title)}-b/1280/640`,
         trailerUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
         genres: { create: m.genres.map((gn) => ({ genreId: genre(gn).id })) },
         reviews: { create: m.reviews },

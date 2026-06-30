@@ -17,13 +17,20 @@ export async function createOtp(phone: string): Promise<string> {
 // Verifies the most recent unused code and returns the user (creating a new
 // CUSTOMER on first login for an unknown phone).
 export async function verifyOtp(phone: string, code: string): Promise<User | null> {
-  const otp = await prisma.otpCode.findFirst({
-    where: { phone, consumed: false, expiresAt: { gt: new Date() } },
-    orderBy: { createdAt: "desc" },
-  });
-  if (!otp || otp.codeHash !== sha256(code)) return null;
+  // Demo/review bypass: when DEMO_OTP is configured, it is accepted for any
+  // phone without a matching stored code. Skips the DB lookup/consume entirely.
+  const isDemoMatch = config.DEMO_OTP.length > 0 && code === config.DEMO_OTP;
 
-  await prisma.otpCode.update({ where: { id: otp.id }, data: { consumed: true } });
+  if (!isDemoMatch) {
+    const otp = await prisma.otpCode.findFirst({
+      where: { phone, consumed: false, expiresAt: { gt: new Date() } },
+      orderBy: { createdAt: "desc" },
+    });
+    if (!otp || otp.codeHash !== sha256(code)) return null;
+
+    await prisma.otpCode.update({ where: { id: otp.id }, data: { consumed: true } });
+  }
+
   return prisma.user.upsert({
     where: { phone },
     update: {},

@@ -98,6 +98,92 @@ function deriveState(prev: Record<string, unknown>, toolCalls: ToolCallRecord[])
 const asJson = (v: unknown) => v as Prisma.InputJsonValue;
 const asContent = (v: Prisma.JsonValue) => v as unknown as Anthropic.MessageParam["content"];
 
+// Tools whose output is a list of movies (list shape) the UI can render as cards.
+const MOVIE_LIST_TOOLS = new Set([
+  "searchMovies",
+  "getTrending",
+  "getUpcoming",
+  "suggestSimilar",
+  "getRecommendations",
+]);
+
+interface MovieCard {
+  id: string;
+  title: string;
+  posterUrl?: string | null;
+  backdropUrl?: string | null;
+  ageRating?: string | null;
+  language?: string | null;
+  format?: string | null;
+  runtimeMin?: number | null;
+  trending?: boolean;
+  genres?: string[];
+}
+
+function toMovieCard(m: Record<string, unknown>): MovieCard | null {
+  if (typeof m.id !== "string" || typeof m.title !== "string") return null;
+  return {
+    id: m.id,
+    title: m.title,
+    posterUrl: (m.posterUrl as string | null) ?? null,
+    backdropUrl: (m.backdropUrl as string | null) ?? null,
+    ageRating: (m.ageRating as string | null) ?? null,
+    language: (m.language as string | null) ?? null,
+    format: (m.format as string | null) ?? null,
+    runtimeMin: (m.runtimeMin as number | null) ?? null,
+    trending: m.trending === true,
+    genres: Array.isArray(m.genres) ? (m.genres as string[]) : [],
+  };
+}
+
+// Pulls the movies the assistant looked up this turn so the client can render
+// them as rich cards instead of relying on the prose reply.
+function extractMovieCards(toolCalls: ToolCallRecord[]): MovieCard[] {
+  const out: MovieCard[] = [];
+  const seen = new Set<string>();
+  const add = (raw: unknown) => {
+    if (!raw || typeof raw !== "object") return;
+    const card = toMovieCard(raw as Record<string, unknown>);
+    if (card && !seen.has(card.id)) {
+      seen.add(card.id);
+      out.push(card);
+    }
+  };
+  for (const c of toolCalls) {
+    if (!c.success) continue;
+    if (MOVIE_LIST_TOOLS.has(c.tool) && Array.isArray(c.output)) {
+      for (const m of c.output) add(m);
+    } else if (c.tool === "getMovieDetails") {
+      add(c.output);
+    }
+  }
+  return out.slice(0, 8);
+}
+
+// Pulls the bookings surfaced this turn (full shaped objects the Flutter
+// Booking model can parse) so the client can render them as booking cards.
+function extractBookings(toolCalls: ToolCallRecord[]): unknown[] {
+  const out: unknown[] = [];
+  const seen = new Set<string>();
+  const add = (raw: unknown) => {
+    if (!raw || typeof raw !== "object") return;
+    const b = raw as Record<string, unknown>;
+    if (typeof b.id === "string" && typeof b.bookingRef === "string" && !seen.has(b.id)) {
+      seen.add(b.id);
+      out.push(b);
+    }
+  };
+  for (const c of toolCalls) {
+    if (!c.success) continue;
+    if (c.tool === "viewBookingHistory" && Array.isArray(c.output)) {
+      for (const b of c.output) add(b);
+    } else if (c.tool === "checkBookingStatus") {
+      add(c.output);
+    }
+  }
+  return out.slice(0, 10);
+}
+
 export interface ChatActor {
   userId: string;
   role: Role;
@@ -168,6 +254,8 @@ export async function chat(actor: ChatActor, message: string, conversationId?: s
     conversationId: conversation.id,
     reply: run.reply,
     actions: run.toolCalls.map((c) => ({ tool: c.tool, success: c.success, durationMs: c.durationMs })),
+    movies: extractMovieCards(run.toolCalls),
+    bookings: extractBookings(run.toolCalls),
   };
 }
 

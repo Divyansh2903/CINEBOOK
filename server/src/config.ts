@@ -11,6 +11,9 @@ const schema = z.object({
   ANTHROPIC_API_KEY: z.string().default(""),
   CHAT_MODEL: z.string().default("claude-sonnet-4-6"),
   CORS_ORIGIN: z.string().default("http://localhost:5173"),
+  // Optional fixed OTP accepted for ANY phone, for demo/review when logs are
+  // not visible. Empty (default) disables it entirely. Set to e.g. "001122".
+  DEMO_OTP: z.string().default(""),
 });
 
 const parsed = schema.safeParse(process.env);
