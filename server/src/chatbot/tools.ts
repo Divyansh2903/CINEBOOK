@@ -209,13 +209,15 @@ export const profileTools: ToolDef[] = [
   },
   {
     name: "getRecommendations",
-    description: "Personalized movie recommendations based on the customer's saved preferences, falling back to trending.",
+    description: "Personalized recommendations of movies the customer can watch now, based on saved preferences, falling back to trending. Only returns released (currently-showing) titles.",
     inputSchema: emptySchema,
     handler: async (_i, ctx) => {
       const u = await prisma.user.findUnique({ where: { id: ctx.userId } });
       const prefs = (u?.preferences ?? {}) as { language?: string; genre?: string };
-      const filtered = await catalog.listMovies({ language: prefs.language, genre: prefs.genre });
-      return filtered.length > 0 ? filtered : catalog.listTrending();
+      const now = new Date();
+      // Only recommend titles already released (unreleased ones can't be booked yet).
+      const filtered = await catalog.listMovies({ language: prefs.language, genre: prefs.genre, releaseDateTo: now });
+      return filtered.length > 0 ? filtered : catalog.listMovies({ trending: true, releaseDateTo: now });
     },
   },
 ];
