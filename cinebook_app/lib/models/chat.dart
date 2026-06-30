@@ -1,3 +1,6 @@
+import 'booking.dart';
+import 'movie.dart';
+
 //A tool the orchestrator ran during a turn — surfaced as an action chip.
 class ChatAction {
   ChatAction({required this.tool, required this.success, required this.durationMs});
@@ -16,10 +19,14 @@ class ChatReply {
     required this.conversationId,
     required this.reply,
     required this.actions,
+    required this.movies,
+    required this.bookings,
   });
   final String conversationId;
   final String reply;
   final List<ChatAction> actions;
+  final List<Movie> movies;
+  final List<Booking> bookings;
   factory ChatReply.fromJson(Map<String, dynamic> json) => ChatReply(
     conversationId: (json['conversationId'] as String?) ?? '',
     reply: (json['reply'] as String?) ?? '',
@@ -27,6 +34,18 @@ class ChatReply {
         (json['actions'] as List?)
             ?.whereType<Map>()
             .map((e) => ChatAction.fromJson(e.cast<String, dynamic>()))
+            .toList() ??
+        const [],
+    movies:
+        (json['movies'] as List?)
+            ?.whereType<Map>()
+            .map((e) => Movie.fromJson(e.cast<String, dynamic>()))
+            .toList() ??
+        const [],
+    bookings:
+        (json['bookings'] as List?)
+            ?.whereType<Map>()
+            .map((e) => Booking.fromJson(e.cast<String, dynamic>()))
             .toList() ??
         const [],
   );
@@ -40,12 +59,16 @@ class ChatMessage {
     required this.role,
     required this.text,
     this.actions = const [],
+    this.movies = const [],
+    this.bookings = const [],
     this.pending = false,
   });
 
   final ChatRole role;
   String text;
   List<ChatAction> actions;
+  List<Movie> movies;
+  List<Booking> bookings;
   bool pending;
 
   //Flattens raw Anthropic content blocks from conversation history to text.

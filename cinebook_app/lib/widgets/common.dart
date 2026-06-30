@@ -1,10 +1,10 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 
 import '../core/theme.dart';
 
-//Frosted glassmorphism container used for panels, sheets and cards.
+//Glassmorphism-styled panel. A real backdrop blur is invisible over the
+//obsidian background and triggers Impeller compositing glitches when several
+//are stacked in a scroll view, so this uses a solid translucent fill instead.
 class GlassPanel extends StatelessWidget {
   const GlassPanel({
     super.key,
@@ -21,22 +21,17 @@ class GlassPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(radius),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-        child: Container(
-          padding: padding,
-          decoration: BoxDecoration(
-            color: const Color(0xFF161618).withValues(alpha: 0.8),
-            borderRadius: BorderRadius.circular(radius),
-            border: Border.all(
-              color: borderColor ?? AppColors.surfaceVariant,
-            ),
-          ),
-          child: child,
+    return Container(
+      padding: padding,
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        color: AppColors.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(radius),
+        border: Border.all(
+          color: borderColor ?? AppColors.surfaceVariant,
         ),
       ),
+      child: child,
     );
   }
 }

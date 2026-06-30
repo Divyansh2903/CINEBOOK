@@ -2,6 +2,7 @@ import 'package:intl/intl.dart';
 
 final _rupee = NumberFormat.currency(locale: 'en_IN', symbol: '₹', decimalDigits: 0);
 final _time = DateFormat('h:mm a');
+final _date = DateFormat('d MMM yyyy');
 final _dayShort = DateFormat('EEE, MMM d');
 final _weekday = DateFormat('EEE');
 final _dayNum = DateFormat('d');
@@ -12,6 +13,7 @@ final _fullDate = DateFormat('EEE, MMM d • h:mm a');
 String rupees(int amount) => _rupee.format(amount);
 
 String timeLabel(DateTime dt) => _time.format(dt.toLocal());
+String dateLabel(DateTime dt) => _date.format(dt.toLocal());
 String dayLabel(DateTime dt) => _dayShort.format(dt.toLocal());
 String weekdayLabel(DateTime dt) => _weekday.format(dt.toLocal());
 String dayNumber(DateTime dt) => _dayNum.format(dt.toLocal());

@@ -53,25 +53,15 @@ class _ShowSelectionScreenState extends State<ShowSelectionScreen> {
     return Scaffold(
       appBar: AppBar(
         leading: const BackButton(),
-        title: Column(
-          children: [
-            const Text('Step 2 of 5',
-                style: TextStyle(
-                    color: AppColors.primary,
-                    fontSize: 11,
-                    letterSpacing: 2,
-                    fontWeight: FontWeight.w600)),
-            Text(widget.movie.title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                    color: AppColors.onSurface, fontSize: 16)),
-          ],
-        ),
         centerTitle: true,
+        title: Text(widget.movie.title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(color: AppColors.onSurface, fontSize: 18)),
       ),
       body: Column(
         children: [
+          const SizedBox(height: 8),
           _DateStrip(
             days: _days,
             selected: _selectedDay,
@@ -80,6 +70,7 @@ class _ShowSelectionScreenState extends State<ShowSelectionScreen> {
               _reload();
             },
           ),
+          const SizedBox(height: 8),
           _ScreenTypeStrip(
             selected: _screenType,
             onPick: (t) {
@@ -87,6 +78,7 @@ class _ShowSelectionScreenState extends State<ShowSelectionScreen> {
               _reload();
             },
           ),
+          const SizedBox(height: 8),
           const Divider(height: 1),
           Expanded(
             child: FutureBuilder<List<Show>>(
@@ -136,10 +128,10 @@ class _DateStrip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 80,
+      height: 78,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         itemCount: days.length,
         separatorBuilder: (_, _) => const SizedBox(width: 10),
         itemBuilder: (_, i) {
@@ -148,37 +140,46 @@ class _DateStrip extends StatelessWidget {
           return GestureDetector(
             onTap: () => onPick(d),
             child: Container(
-              width: 58,
+              width: 56,
+              padding: const EdgeInsets.symmetric(vertical: 8),
               decoration: BoxDecoration(
                 color: active
                     ? AppColors.primary
                     : AppColors.surfaceContainerHigh,
                 borderRadius: BorderRadius.circular(AppRadii.card),
               ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(relativeDay(d),
-                      style: TextStyle(
-                          fontSize: 11,
-                          color: active
-                              ? AppColors.onPrimary
-                              : AppColors.onSurfaceVariant)),
-                  const SizedBox(height: 4),
-                  Text(dayNumber(d),
-                      style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w700,
-                          color: active
-                              ? AppColors.onPrimary
-                              : AppColors.onSurface)),
-                  Text(monthLabel(d),
-                      style: TextStyle(
-                          fontSize: 10,
-                          color: active
-                              ? AppColors.onPrimary
-                              : AppColors.onSurfaceVariant)),
-                ],
+              //Scale-down guards against the row overflowing under larger
+              //system text scales — the content shrinks instead of clipping.
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(relativeDay(d),
+                        maxLines: 1,
+                        style: TextStyle(
+                            fontSize: 11,
+                            color: active
+                                ? AppColors.onPrimary
+                                : AppColors.onSurfaceVariant)),
+                    const SizedBox(height: 2),
+                    Text(dayNumber(d),
+                        maxLines: 1,
+                        style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                            color: active
+                                ? AppColors.onPrimary
+                                : AppColors.onSurface)),
+                    Text(monthLabel(d),
+                        maxLines: 1,
+                        style: TextStyle(
+                            fontSize: 10,
+                            color: active
+                                ? AppColors.onPrimary
+                                : AppColors.onSurfaceVariant)),
+                  ],
+                ),
               ),
             ),
           );

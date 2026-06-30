@@ -8,7 +8,6 @@ import '../../core/api_client.dart';
 import '../../core/services.dart';
 import '../../core/theme.dart';
 import '../../models/chat.dart';
-import '../../state/auth_controller.dart';
 import 'chat_widgets.dart';
 
 class ChatScreen extends StatefulWidget {
@@ -91,6 +90,8 @@ class _ChatScreenState extends State<ChatScreen> {
           role: ChatRole.assistant,
           text: reply.reply.isEmpty ? '(no response)' : reply.reply,
           actions: reply.actions,
+          movies: reply.movies,
+          bookings: reply.bookings,
         ));
       });
     } on ApiException catch (e) {
@@ -121,63 +122,50 @@ class _ChatScreenState extends State<ChatScreen> {
     });
   }
 
-  //A short "remembering your … preference" line from saved prefs.
-  String? _prefsHint() {
-    final prefs = context.read<AuthController>().user?.preferences ?? {};
-    if (prefs.isEmpty) return null;
-    final value = prefs.values.firstWhere(
-      (v) => v != null && '$v'.isNotEmpty,
-      orElse: () => null,
-    );
-    if (value == null) return null;
-    final v = value is List ? value.join(', ') : '$value';
-    return 'Remembering your $v preference';
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.surfaceContainerLowest,
       appBar: AppBar(
+        backgroundColor: AppColors.surfaceContainerLowest,
+        surfaceTintColor: Colors.transparent,
         automaticallyImplyLeading: false,
         titleSpacing: 16,
-        title: Row(
+        title: Text('CineBook AI',
+            style: Theme.of(context).textTheme.titleLarge
+                ?.copyWith(color: AppColors.primary)),
+      ),
+      //Subtle spotlight glow at the top of the conversation canvas.
+      body: DecoratedBox(
+        decoration: const BoxDecoration(
+          gradient: RadialGradient(
+            center: Alignment(0, -1),
+            radius: 1.1,
+            colors: [Color(0x141E2020), AppColors.surfaceContainerLowest],
+            stops: [0.0, 0.6],
+          ),
+        ),
+        //List sits above the composer in a Column so the conversation always
+        //scrolls fully clear of the input and suggestion chips.
+        child: Column(
           children: [
-            Container(
-              width: 34,
-              height: 34,
-              decoration: const BoxDecoration(
-                color: AppColors.surfaceVariant,
-                shape: BoxShape.circle,
+            Expanded(
+              child: ListView.builder(
+                controller: _scroll,
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                itemCount: _messages.length,
+                itemBuilder: (_, i) => ChatBubble(message: _messages[i]),
               ),
-              child: const Icon(Icons.smart_toy,
-                  color: AppColors.primary, size: 20),
             ),
-            const SizedBox(width: 10),
-            Text('CineBook AI',
-                style: Theme.of(context).textTheme.titleLarge
-                    ?.copyWith(color: AppColors.primary)),
+            _Composer(
+              input: _input,
+              sending: _sending,
+              suggestions: _suggestions,
+              onSend: () => _send(_input.text),
+              onSuggestion: _send,
+            ),
           ],
         ),
-      ),
-      body: Column(
-        children: [
-          Expanded(
-            child: ListView.builder(
-              controller: _scroll,
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-              itemCount: _messages.length,
-              itemBuilder: (_, i) => ChatBubble(message: _messages[i]),
-            ),
-          ),
-          _Composer(
-            input: _input,
-            sending: _sending,
-            suggestions: _suggestions,
-            prefsHint: _prefsHint(),
-            onSend: () => _send(_input.text),
-            onSuggestion: _send,
-          ),
-        ],
       ),
     );
   }
@@ -188,7 +176,6 @@ class _Composer extends StatelessWidget {
     required this.input,
     required this.sending,
     required this.suggestions,
-    required this.prefsHint,
     required this.onSend,
     required this.onSuggestion,
   });
@@ -196,130 +183,121 @@ class _Composer extends StatelessWidget {
   final TextEditingController input;
   final bool sending;
   final List<String> suggestions;
-  final String? prefsHint;
   final VoidCallback onSend;
   final ValueChanged<String> onSuggestion;
 
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-        child: Container(
-          decoration: BoxDecoration(
-            color: AppColors.surfaceContainerLowest.withValues(alpha: 0.9),
-            border: const Border(
-                top: BorderSide(color: Color(0x334D4635))),
-          ),
-          child: SafeArea(
-            top: false,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                SizedBox(
-                  height: 40,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.fromLTRB(16, 6, 16, 0),
-                    itemCount: suggestions.length,
-                    separatorBuilder: (_, _) => const SizedBox(width: 8),
-                    itemBuilder: (_, i) => GestureDetector(
-                      onTap: sending ? null : () => onSuggestion(suggestions[i]),
-                      child: Container(
-                        alignment: Alignment.center,
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                        decoration: BoxDecoration(
-                          color: AppColors.surfaceVariant.withValues(alpha: 0.5),
-                          borderRadius: BorderRadius.circular(AppRadii.pill),
-                          border: Border.all(color: AppColors.outlineVariant),
-                        ),
-                        child: Text(suggestions[i],
-                            style: const TextStyle(
-                                color: AppColors.onSurfaceVariant,
-                                fontSize: 12)),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        //Floating suggestion chips — transparent strip so the chat shows behind.
+        SizedBox(
+          height: 50,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+            itemCount: suggestions.length,
+            separatorBuilder: (_, _) => const SizedBox(width: 10),
+            itemBuilder: (_, i) => Center(
+              child: GestureDetector(
+                onTap: sending ? null : () => onSuggestion(suggestions[i]),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(AppRadii.pill),
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+                    child: Container(
+                      alignment: Alignment.center,
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceContainer.withValues(alpha: 0.55),
+                        borderRadius: BorderRadius.circular(AppRadii.pill),
+                        border: Border.all(
+                            color: AppColors.outlineVariant.withValues(alpha: 0.6)),
                       ),
+                      child: Text(suggestions[i],
+                          style: const TextStyle(
+                              color: AppColors.onSurfaceVariant, fontSize: 13)),
                     ),
                   ),
                 ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 12, 8),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: input,
-                          minLines: 1,
-                          maxLines: 4,
-                          textInputAction: TextInputAction.send,
-                          onSubmitted: (_) => onSend(),
-                          style: const TextStyle(color: AppColors.onSurface),
-                          decoration: InputDecoration(
-                            hintText: 'Ask me anything…',
-                            filled: true,
-                            fillColor: AppColors.surfaceContainerHigh,
-                            contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 12),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(AppRadii.pill),
-                              borderSide: BorderSide.none,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      _SendButton(sending: sending, onTap: onSend),
-                    ],
-                  ),
-                ),
-                if (prefsHint != null)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(Icons.memory,
-                            color: AppColors.onSurfaceVariant, size: 12),
-                        const SizedBox(width: 4),
-                        Text(prefsHint!.toUpperCase(),
-                            style: const TextStyle(
-                                color: AppColors.onSurfaceVariant,
-                                fontSize: 10,
-                                letterSpacing: 1.5)),
-                      ],
-                    ),
-                  ),
-              ],
+              ),
             ),
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _SendButton extends StatelessWidget {
-  const _SendButton({required this.sending, required this.onTap});
-  final bool sending;
-  final VoidCallback onTap;
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: sending ? null : onTap,
-      child: Container(
-        width: 46,
-        height: 46,
-        decoration: BoxDecoration(
-          color: sending ? AppColors.surfaceContainerHigh : AppColors.primary,
-          shape: BoxShape.circle,
+        //Input bar with a blurred gradient backdrop fading up into the chat.
+        ClipRect(
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+            child: Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.bottomCenter,
+                  end: Alignment.topCenter,
+                  colors: [AppColors.surfaceContainerLowest, Color(0x000D0E0F)],
+                ),
+              ),
+              child: SafeArea(
+                top: false,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                  //Send button lives inside the input pill, on the right edge.
+                  child: Stack(
+                    alignment: Alignment.centerRight,
+                    children: [
+                      TextField(
+                        controller: input,
+                        minLines: 1,
+                        maxLines: 4,
+                        textInputAction: TextInputAction.send,
+                        onSubmitted: (_) => onSend(),
+                        style: const TextStyle(color: AppColors.onSurface),
+                        decoration: InputDecoration(
+                          hintText: 'Ask me anything…',
+                          filled: true,
+                          fillColor:
+                              AppColors.surfaceContainer.withValues(alpha: 0.6),
+                          contentPadding: const EdgeInsets.only(
+                              left: 20, right: 52, top: 16, bottom: 16),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(AppRadii.pill),
+                            borderSide: BorderSide(
+                                color: AppColors.primaryContainer
+                                    .withValues(alpha: 0.2)),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(AppRadii.pill),
+                            borderSide: const BorderSide(
+                                color: AppColors.primaryContainer, width: 1.4),
+                          ),
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.only(right: 6),
+                        child: sending
+                            ? const Padding(
+                                padding: EdgeInsets.all(12),
+                                child: SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                      strokeWidth: 2, color: AppColors.primary),
+                                ),
+                              )
+                            : IconButton(
+                                onPressed: onSend,
+                                icon: const Icon(Icons.arrow_upward_rounded,
+                                    color: AppColors.primary),
+                              ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
         ),
-        child: sending
-            ? const Padding(
-                padding: EdgeInsets.all(13),
-                child: CircularProgressIndicator(
-                    strokeWidth: 2, color: AppColors.primary),
-              )
-            : const Icon(Icons.arrow_upward, color: AppColors.onPrimary),
-      ),
+      ],
     );
   }
 }

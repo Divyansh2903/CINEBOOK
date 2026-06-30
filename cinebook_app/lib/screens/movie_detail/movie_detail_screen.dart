@@ -5,6 +5,7 @@ import '../../core/services.dart';
 import '../../core/theme.dart';
 import '../../models/enums.dart';
 import '../../models/movie.dart';
+import '../../widgets/ai_icon.dart';
 import '../../widgets/common.dart';
 import '../../widgets/movie_card.dart';
 import '../../widgets/poster.dart';
@@ -402,7 +403,7 @@ class _BottomActions extends StatelessWidget {
                   flex: 2,
                   child: OutlinedButton.icon(
                     onPressed: onAskAi,
-                    icon: const Icon(Icons.smart_toy_outlined, size: 18),
+                    icon: const AiIcon(size: 18),
                     label: const Text('Ask AI'),
                   ),
                 ),

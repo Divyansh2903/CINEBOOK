@@ -38,9 +38,13 @@ class _SeatSelectionScreenState extends State<SeatSelectionScreen> {
   bool _proceeding = false;
   bool _busySeat = false;
 
+  late final AppServices _services;
+
   @override
   void initState() {
     super.initState();
+    //Captured here so dispose() never touches a deactivated context.
+    _services = context.read<AppServices>();
     _load();
     _connectSocket();
   }
@@ -52,7 +56,7 @@ class _SeatSelectionScreenState extends State<SeatSelectionScreen> {
     _socket?.dispose();
     //Release my holds if I'm leaving without proceeding to payment.
     if (!_proceeding && _selected.isNotEmpty) {
-      context.read<AppServices>().shows.releaseSeats(widget.show.id);
+      _services.shows.releaseSeats(widget.show.id);
     }
     super.dispose();
   }
@@ -63,7 +67,7 @@ class _SeatSelectionScreenState extends State<SeatSelectionScreen> {
       _error = null;
     });
     try {
-      final map = await context.read<AppServices>().shows.availability(widget.show.id);
+      final map = await _services.shows.availability(widget.show.id);
       //Adopt any seats the server already holds for me (e.g. after a reload).
       final mine = map.seats.where((s) => s.heldByMe).map((s) => s.id);
       if (mounted) {
@@ -119,7 +123,7 @@ class _SeatSelectionScreenState extends State<SeatSelectionScreen> {
     if (!selected && (seat.status == 'booked' || seat.status == 'held')) return;
 
     setState(() => _busySeat = true);
-    final shows = context.read<AppServices>().shows;
+    final shows = _services.shows;
     try {
       if (selected) {
         await shows.releaseSeats(widget.show.id, seatIds: [seat.id]);
@@ -215,18 +219,8 @@ class _SeatSelectionScreenState extends State<SeatSelectionScreen> {
       appBar: AppBar(
         leading: const BackButton(),
         centerTitle: true,
-        title: Column(
-          children: [
-            const Text('Step 3 of 5',
-                style: TextStyle(
-                    color: AppColors.primary,
-                    fontSize: 11,
-                    letterSpacing: 2,
-                    fontWeight: FontWeight.w600)),
-            const Text('Select Seats',
-                style: TextStyle(color: AppColors.onSurface, fontSize: 16)),
-          ],
-        ),
+        title: const Text('Select Seats',
+            style: TextStyle(color: AppColors.onSurface, fontSize: 18)),
       ),
       body: _buildBody(),
       bottomNavigationBar: _selected.isEmpty ? null : _checkoutBar(),
@@ -305,10 +299,9 @@ class _SeatSelectionScreenState extends State<SeatSelectionScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(rupees(_total),
-                          style: const TextStyle(
+                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
                               color: AppColors.onSurface,
-                              fontSize: 22,
-                              fontWeight: FontWeight.w700)),
+                              fontWeight: FontWeight.w600)),
                       const Text('Incl. taxes',
                           style: TextStyle(
                               color: AppColors.onSurfaceVariant, fontSize: 11)),

@@ -30,7 +30,11 @@ class _BookingsScreenState extends State<BookingsScreen> {
 
   Future<void> _refresh() async {
     final data = await _load();
-    if (mounted) setState(() => _future = Future.value(data));
+    if (mounted) {
+      setState(() {
+        _future = Future.value(data);
+      });
+    }
   }
 
   @override
