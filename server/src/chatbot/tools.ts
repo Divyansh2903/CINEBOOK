@@ -37,7 +37,7 @@ const emptySchema: JSONSchema = { type: "object", properties: {} };
 export const movieTools: ToolDef[] = [
   {
     name: "searchMovies",
-    description: "Find movies matching optional filters: genre, language, ageRating (U/UA/A), format (TWO_D/THREE_D), theatre chain, screenType (STANDARD/IMAX/FOUR_DX/DOLBY_ATMOS), trending.",
+    description: "Find movies matching optional filters: genre, language, ageRating (U/UA/A), format (TWO_D/THREE_D), theatre chain, screenType (STANDARD/IMAX/FOUR_DX/DOLBY_ATMOS), trending, and a release-date range. For 'releasing on <date>' questions, set releaseDateFrom/releaseDateTo to bound that single day; for the general 'coming soon' list use getUpcoming instead.",
     inputSchema: objectSchema({
       genre: stringProp("Genre name, e.g. Sci-Fi"),
       language: stringProp("Language, e.g. English"),
@@ -46,8 +46,15 @@ export const movieTools: ToolDef[] = [
       chain: stringProp("Theatre chain, e.g. PVR"),
       screenType: { type: "string", enum: ["STANDARD", "IMAX", "FOUR_DX", "DOLBY_ATMOS"] },
       trending: { type: "boolean" },
+      releaseDateFrom: stringProp("ISO lower bound for release date, e.g. 2026-07-03T00:00:00Z (start of the day)"),
+      releaseDateTo: stringProp("ISO upper bound for release date, e.g. 2026-07-03T23:59:59Z (end of the day)"),
     }),
-    handler: (i) => catalog.listMovies(i),
+    handler: (i) =>
+      catalog.listMovies({
+        ...i,
+        releaseDateFrom: i.releaseDateFrom ? new Date(i.releaseDateFrom) : undefined,
+        releaseDateTo: i.releaseDateTo ? new Date(i.releaseDateTo) : undefined,
+      }),
   },
   {
     name: "getMovieDetails",
