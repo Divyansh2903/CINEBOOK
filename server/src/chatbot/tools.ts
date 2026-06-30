@@ -216,8 +216,14 @@ export const profileTools: ToolDef[] = [
       const prefs = (u?.preferences ?? {}) as { language?: string; genre?: string };
       const now = new Date();
       // Only recommend titles already released (unreleased ones can't be booked yet).
-      const filtered = await catalog.listMovies({ language: prefs.language, genre: prefs.genre, releaseDateTo: now });
-      return filtered.length > 0 ? filtered : catalog.listMovies({ trending: true, releaseDateTo: now });
+      const matched = await catalog.listMovies({ language: prefs.language, genre: prefs.genre, releaseDateTo: now });
+      const pool = matched.length > 0 ? matched : await catalog.listMovies({ releaseDateTo: now });
+      // Curate a short list rather than the whole catalog: trending first, then newest.
+      const ranked = [...pool].sort((a, b) => {
+        if (a.trending !== b.trending) return a.trending ? -1 : 1;
+        return new Date(b.releaseDate).getTime() - new Date(a.releaseDate).getTime();
+      });
+      return ranked.slice(0, 4);
     },
   },
 ];
