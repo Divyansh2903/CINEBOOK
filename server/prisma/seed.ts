@@ -31,6 +31,16 @@ const at = (dayOffset: number, hour: number, minute = 0) => {
   return d;
 };
 
+//The coming Friday at noon — always strictly in the future (today-is-Friday
+//rolls to next week). Used to seed a "releasing this Friday" title.
+const nextFriday = () => {
+  const d = new Date();
+  d.setHours(12, 0, 0, 0);
+  const delta = ((5 - d.getDay()) + 7) % 7 || 7;
+  d.setDate(d.getDate() + delta);
+  return d;
+};
+
 async function main() {
   console.log("Resetting database…");
   // Order matters (FKs). deleteMany on every table.
@@ -126,9 +136,42 @@ async function main() {
       cast: [{ name: "Ryan Gosling", role: "Colt Seavers" }, { name: "Emily Blunt", role: "Jody" }],
       reviews: [{ author: "Kabir", rating: 3, text: "Fun, breezy, forgettable." }],
     },
+    //Upcoming releases (future releaseDate via releaseOverrides below) — these
+    //show under "Coming Soon" and intentionally have no shows or reviews yet.
+    {
+      title: "Alpha", runtimeMin: 148, ageRating: "UA" as const, language: "Hindi",
+      format: "THREE_D" as const, trending: false, genres: ["Action", "Thriller"],
+      poster: "https://assets-in.bmscdn.com/iedb/movies/images/mobile/thumbnail/xlarge/alpha-et00403805-1781695445.jpg",
+      description: "A lethal operative is pulled into a shadowy war that redraws the lines of loyalty.",
+      cast: [{ name: "Sharvari", role: "Alpha" }, { name: "Bobby Deol", role: "Antagonist" }],
+      reviews: [],
+    },
+    {
+      title: "Evil Dead Burn", runtimeMin: 96, ageRating: "A" as const, language: "English",
+      format: "TWO_D" as const, trending: false, genres: ["Horror", "Thriller"],
+      poster: "https://assets-in.bmscdn.com/iedb/movies/images/mobile/thumbnail/xlarge/evil-dead-burn-et00496605-1776942881.jpg",
+      description: "A family is torn apart when an ancient evil is unleashed once more.",
+      cast: [{ name: "Souheila Yacoub", role: "Survivor" }],
+      reviews: [],
+    },
+    {
+      title: "Dhamaal 4", runtimeMin: 142, ageRating: "UA" as const, language: "Hindi",
+      format: "TWO_D" as const, trending: false, genres: ["Comedy"],
+      poster: "https://assets-in.bmscdn.com/iedb/movies/images/mobile/thumbnail/xlarge/dhamaal-4-et00452553-1781368855.jpg",
+      description: "The gang is back, chasing one more impossible fortune in their wildest hunt yet.",
+      cast: [{ name: "Ajay Devgn", role: "Lead" }, { name: "Riteish Deshmukh", role: "Gang member" }, { name: "Arshad Warsi", role: "Gang member" }],
+      reviews: [],
+    },
   ];
 
   const slug = (t: string) => t.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+  //Titles released in the future appear only under "Coming Soon"; everything
+  //else keeps a staggered past release date.
+  const releaseOverrides: Record<string, Date> = {
+    "Alpha": nextFriday(),
+    "Evil Dead Burn": at(10, 12),
+    "Dhamaal 4": at(20, 12),
+  };
   const movies = [];
   for (let i = 0; i < movieDefs.length; i++) {
     const m = movieDefs[i]!;
@@ -137,7 +180,7 @@ async function main() {
         title: m.title,
         description: m.description,
         runtimeMin: m.runtimeMin,
-        releaseDate: at(-30 + i * 5, 0),
+        releaseDate: releaseOverrides[m.title] ?? at(-30 + i * 5, 0),
         ageRating: m.ageRating,
         language: m.language,
         format: m.format,
@@ -190,10 +233,13 @@ async function main() {
   //Shows: each movie across a rotating set of screens, next 7 days, 4 slots/day
   console.log("Seeding shows…");
   const slots = [10, 13, 17, 21]; // hours
+  const now = new Date();
+  //Only released movies are playing; upcoming titles get no shows yet.
+  const playing = movies.filter((m) => m.releaseDate <= now);
   let showCount = 0;
   for (let d = 0; d < 7; d++) {
-    for (let mi = 0; mi < movies.length; mi++) {
-      const movie = movies[mi]!;
+    for (let mi = 0; mi < playing.length; mi++) {
+      const movie = playing[mi]!;
       const screen = screens[(d + mi) % screens.length]!;
       const hour = slots[(d + mi) % slots.length]!;
       const startsAt = at(d, hour);
