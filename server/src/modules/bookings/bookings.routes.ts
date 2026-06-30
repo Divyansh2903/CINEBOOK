@@ -1,7 +1,16 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
+import { rateLimit } from "../../lib/rateLimit.js";
 import { parse } from "../../lib/validate.js";
 import * as bookingsService from "./bookings.service.js";
+
+// Guards against runaway booking creation: 5 per hour per customer.
+const bookingLimit = rateLimit({
+  keyFn: (req) => `book:${req.user.sub}`,
+  limit: 5,
+  windowMs: 60 * 60_000,
+  message: (s) => `Too many booking attempts. Try again in ${Math.ceil(s / 60)} min.`,
+});
 
 export async function bookingsRoutes(app: FastifyInstance): Promise<void> {
   app.get("/promos/:code", async (req) => {
@@ -9,7 +18,7 @@ export async function bookingsRoutes(app: FastifyInstance): Promise<void> {
     return bookingsService.validatePromo(code);
   });
 
-  app.post("/bookings", { preHandler: [app.authenticate] }, async (req) => {
+  app.post("/bookings", { preHandler: [app.authenticate, bookingLimit] }, async (req) => {
     const body = parse(
       z.object({
         showId: z.string(),

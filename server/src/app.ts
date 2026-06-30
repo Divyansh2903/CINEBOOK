@@ -13,7 +13,9 @@ import { bookingsRoutes } from "./modules/bookings/bookings.routes.js";
 import { schedulingRoutes } from "./modules/shows/scheduling.routes.js";
 import { adminRoutes } from "./modules/admin/admin.routes.js";
 import { chatRoutes } from "./chatbot/chat.routes.js";
+import { metricsRoutes } from "./modules/observability/metrics.routes.js";
 import { AppError } from "./lib/errors.js";
+import { metrics } from "./lib/metrics.js";
 
 declare module "fastify" {
   interface FastifyRequest {
@@ -32,9 +34,18 @@ export async function buildApp(): Promise<FastifyInstance> {
 
   await app.register(cors, { origin: config.CORS_ORIGIN, credentials: true });
 
-  // Attach a per-request traceId, threaded into logs and tool calls.
-  app.addHook("onRequest", async (req) => {
+  // Attach a per-request traceId and echo it back so clients and logs can
+  // correlate a request end-to-end (request → tools → DB → response).
+  app.addHook("onRequest", async (req, reply) => {
     req.traceId = req.id as string;
+    reply.header("x-trace-id", req.traceId);
+  });
+
+  // Record request count, latency, and errors for /metrics, keyed by the route
+  // pattern (not the raw URL) to keep label cardinality bounded.
+  app.addHook("onResponse", async (req, reply) => {
+    const route = req.routeOptions.url ?? "unknown";
+    metrics.recordHttp(req.method, route, reply.statusCode, reply.elapsedTime);
   });
 
   app.setErrorHandler((err: FastifyError, req, reply) => {
@@ -45,7 +56,12 @@ export async function buildApp(): Promise<FastifyInstance> {
       message: err.message,
       traceId: req.traceId,
     };
-    if (err instanceof AppError && err.details !== undefined) body.details = err.details;
+    if (err instanceof AppError && err.details !== undefined) {
+      body.details = err.details;
+      // Surface a Retry-After header for throttled / temporarily-unavailable cases.
+      const retryAfter = (err.details as { retryAfterSeconds?: number })?.retryAfterSeconds;
+      if (typeof retryAfter === "number") reply.header("Retry-After", retryAfter);
+    }
     reply.status(status).send(body);
   });
 
@@ -65,6 +81,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   await app.register(schedulingRoutes);
   await app.register(adminRoutes);
   await app.register(chatRoutes);
+  await app.register(metricsRoutes);
 
   return app;
 }

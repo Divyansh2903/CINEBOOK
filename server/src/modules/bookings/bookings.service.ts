@@ -129,7 +129,9 @@ export async function payBooking(userId: string, bookingId: string, cardNumber: 
     await prisma.payment.update({ where: { id: payment.id }, data: { attempts: { increment: 1 } } });
 
     if (err instanceof CircuitOpenError) {
-      throw new AppError(503, "Payments are temporarily unavailable. Please try again in a few seconds.");
+      throw new AppError(503, "Payments are temporarily unavailable. Please try again in a few seconds.", {
+        retryAfterSeconds: Math.ceil(err.retryAfterMs / 1000),
+      });
     }
     await prisma.payment.update({ where: { id: payment.id }, data: { status: "FAILED" } });
     if (err instanceof PaymentDeclinedError) throw new AppError(402, err.message);

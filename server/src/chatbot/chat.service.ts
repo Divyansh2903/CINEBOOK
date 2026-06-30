@@ -2,6 +2,7 @@ import type Anthropic from "@anthropic-ai/sdk";
 import { Prisma, type Role } from "@prisma/client";
 import { prisma } from "../db.js";
 import { notFound } from "../lib/errors.js";
+import { metrics } from "../lib/metrics.js";
 import { buildSystemPrompt } from "./prompt.js";
 import { runConversation, type ToolCallRecord } from "./orchestrator.js";
 import { customerTools, type ToolContext, type ToolDef } from "./tools.js";
@@ -160,6 +161,8 @@ export async function chat(actor: ChatActor, message: string, conversationId?: s
       });
     }
   });
+
+  for (const c of run.toolCalls) metrics.recordToolCall(c.tool, c.success, c.durationMs);
 
   return {
     conversationId: conversation.id,

@@ -30,3 +30,33 @@ class InMemoryRateLimiter implements RateLimiter {
 }
 
 export const rateLimiter: RateLimiter = new InMemoryRateLimiter();
+
+import type { FastifyReply, FastifyRequest, preHandlerHookHandler } from "fastify";
+
+interface RateLimitOptions {
+  keyFn: (req: FastifyRequest) => string;
+  limit: number;
+  windowMs: number;
+  message: (retryAfterSeconds: number) => string;
+}
+
+// Reusable preHandler: enforces a sliding window and always emits standard
+// RateLimit-* headers, plus Retry-After + a friendly 429 body when throttled.
+export function rateLimit(opts: RateLimitOptions): preHandlerHookHandler {
+  return async (req: FastifyRequest, reply: FastifyReply) => {
+    const result = await rateLimiter.hit(opts.keyFn(req), opts.limit, opts.windowMs);
+    reply.header("RateLimit-Limit", opts.limit);
+    reply.header("RateLimit-Remaining", Math.max(0, result.remaining));
+    if (!result.allowed) {
+      const retryAfterSeconds = Math.ceil(result.retryAfterMs / 1000);
+      reply.header("Retry-After", retryAfterSeconds);
+      reply.header("RateLimit-Reset", retryAfterSeconds);
+      return reply.code(429).send({
+        error: "TooManyRequests",
+        message: opts.message(retryAfterSeconds),
+        retryAfterSeconds,
+        traceId: req.traceId,
+      });
+    }
+  };
+}
