@@ -34,6 +34,10 @@ class AppServices {
   //Lets a pushed route ask the shell to switch tabs (e.g. to My Bookings).
   final ValueNotifier<int?> requestedTab = ValueNotifier<int?>(null);
 
+  //Bumped whenever the My Bookings tab is opened so the (kept-alive) list
+  //re-fetches and a just-completed booking shows up immediately.
+  final ValueNotifier<int> bookingsRefresh = ValueNotifier<int>(0);
+
   factory AppServices.build() {
     final tokens = TokenStorage();
     final api = ApiClient(tokens);

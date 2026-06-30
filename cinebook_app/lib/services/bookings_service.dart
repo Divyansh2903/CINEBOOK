@@ -47,8 +47,10 @@ class BookingsService {
     return Booking.fromJson((res.data as Map).cast<String, dynamic>());
   }
 
+  //Sends an empty JSON object so the request body isn't empty — Fastify
+  //rejects a blank body when the content-type is application/json.
   Future<String> cancel(String id) async {
-    final res = await _api.post('/bookings/$id/cancel');
+    final res = await _api.post('/bookings/$id/cancel', body: const <String, dynamic>{});
     return (res.data as Map)['status'] as String;
   }
 }

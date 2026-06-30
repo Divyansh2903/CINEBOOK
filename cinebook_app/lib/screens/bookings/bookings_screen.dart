@@ -18,6 +18,7 @@ class BookingsScreen extends StatefulWidget {
 
 class _BookingsScreenState extends State<BookingsScreen> {
   late Future<List<Booking>> _future;
+  ValueNotifier<int>? _refreshSignal;
 
   @override
   void initState() {
@@ -25,16 +26,52 @@ class _BookingsScreenState extends State<BookingsScreen> {
     _future = _load();
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    //Re-fetch whenever the shell signals the tab was (re)opened.
+    final signal = context.read<AppServices>().bookingsRefresh;
+    if (_refreshSignal != signal) {
+      _refreshSignal?.removeListener(_onRefreshSignal);
+      _refreshSignal = signal..addListener(_onRefreshSignal);
+    }
+  }
+
+  void _onRefreshSignal() => _refresh();
+
+  @override
+  void dispose() {
+    _refreshSignal?.removeListener(_onRefreshSignal);
+    super.dispose();
+  }
+
   Future<List<Booking>> _load() =>
       context.read<AppServices>().bookings.list();
 
   Future<void> _refresh() async {
-    final data = await _load();
-    if (mounted) {
-      setState(() {
-        _future = Future.value(data);
-      });
-    }
+    final future = _load();
+    //Show the spinner immediately while the new request is in flight.
+    if (mounted) setState(() => _future = future);
+    await future.catchError((_) => <Booking>[]);
+  }
+
+  //Wraps a non-scrolling state widget so pull-to-refresh works even when the
+  //list is empty or errored (the gesture needs a scrollable child).
+  Widget _refreshable(Widget child) {
+    return RefreshIndicator(
+      color: AppColors.primary,
+      backgroundColor: AppColors.surfaceContainerHigh,
+      onRefresh: _refresh,
+      child: LayoutBuilder(
+        builder: (context, constraints) => SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: constraints.maxHeight),
+            child: child,
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -46,6 +83,13 @@ class _BookingsScreenState extends State<BookingsScreen> {
         title: Text('My Bookings',
             style: Theme.of(context).textTheme.displayLarge
                 ?.copyWith(fontSize: 26)),
+        actions: [
+          IconButton(
+            tooltip: 'Refresh',
+            icon: const Icon(Icons.refresh_rounded),
+            onPressed: _refresh,
+          ),
+        ],
       ),
       body: FutureBuilder<List<Booking>>(
         future: _future,
@@ -55,20 +99,21 @@ class _BookingsScreenState extends State<BookingsScreen> {
                 child: CircularProgressIndicator(color: AppColors.primary));
           }
           if (snap.hasError) {
-            return StateMessage(
+            return _refreshable(StateMessage(
               icon: Icons.cloud_off_rounded,
               title: 'Could not load bookings',
               subtitle: '${snap.error}',
               onRetry: _refresh,
-            );
+            ));
           }
           final bookings = snap.data!;
           if (bookings.isEmpty) {
-            return const StateMessage(
+            return _refreshable(const StateMessage(
               icon: Icons.confirmation_number_outlined,
               title: 'No bookings yet',
-              subtitle: 'Your booked tickets will appear here.',
-            );
+              subtitle: 'Pull down to refresh — your booked tickets will '
+                  'appear here.',
+            ));
           }
           return RefreshIndicator(
             color: AppColors.primary,

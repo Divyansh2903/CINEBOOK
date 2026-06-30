@@ -25,7 +25,16 @@ class MainShellState extends State<MainShell> {
   ValueNotifier<String?>? _chatPrompt;
   ValueNotifier<int?>? _requestedTab;
 
-  void goToTab(int index) => setState(() => _index = index);
+  static const _bookingsTab = 2;
+
+  void goToTab(int index) {
+    //Re-fetch My Bookings each time the tab is opened (IndexedStack keeps the
+    //screen alive, so it wouldn't otherwise reload after a new booking).
+    if (index == _bookingsTab) {
+      context.read<AppServices>().bookingsRefresh.value++;
+    }
+    setState(() => _index = index);
+  }
 
   @override
   void didChangeDependencies() {

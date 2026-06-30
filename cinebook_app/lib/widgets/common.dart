@@ -240,16 +240,61 @@ BoxDecoration topScrim() => const BoxDecoration(
   ),
 );
 
+//A single, readable toast used app-wide. The error variant is tinted red with
+//a high-contrast message, the success variant gold — both far more legible than
+//the old gray-on-gray snackbar.
 void showSnack(BuildContext context, String message, {bool error = false}) {
-  ScaffoldMessenger.of(context)
+  final accent = error ? AppColors.error : AppColors.primary;
+  final icon = error ? Icons.error_outline_rounded : Icons.check_circle_outline_rounded;
+  final messenger = ScaffoldMessenger.of(context);
+
+  messenger
     ..hideCurrentSnackBar()
     ..showSnackBar(
       SnackBar(
-        content: Text(message),
-        backgroundColor: AppColors.surfaceContainerHigh,
+        elevation: 0,
+        backgroundColor: Colors.transparent,
         behavior: SnackBarBehavior.floating,
-        showCloseIcon: true,
-        closeIconColor: AppColors.onSurfaceVariant,
+        margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        padding: EdgeInsets.zero,
+        duration: Duration(seconds: error ? 5 : 3),
+        content: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+          decoration: BoxDecoration(
+            color: AppColors.surfaceContainerHighest,
+            borderRadius: BorderRadius.circular(AppRadii.card),
+            border: Border.all(color: accent.withValues(alpha: 0.55)),
+            boxShadow: AppShadows.ambient,
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(icon, color: accent, size: 22),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  message,
+                  style: const TextStyle(
+                    color: AppColors.onSurface,
+                    fontSize: 14,
+                    height: 1.35,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              InkWell(
+                onTap: messenger.hideCurrentSnackBar,
+                borderRadius: BorderRadius.circular(AppRadii.pill),
+                child: const Padding(
+                  padding: EdgeInsets.all(2),
+                  child: Icon(Icons.close_rounded,
+                      color: AppColors.onSurfaceVariant, size: 18),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
 }
