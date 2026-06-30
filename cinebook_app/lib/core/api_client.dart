@@ -5,11 +5,16 @@ import 'token_storage.dart';
 
 //A friendly, typed wrapper over backend error envelopes.
 class ApiException implements Exception {
-  ApiException(this.message, {this.statusCode, this.details});
+  ApiException(this.message, {this.statusCode, this.details, this.retryAfterSeconds});
 
   final String message;
   final int? statusCode;
   final dynamic details;
+  //Set for 429 (rate limited) and 503 (circuit breaker) responses.
+  final int? retryAfterSeconds;
+
+  bool get isRateLimited => statusCode == 429;
+  bool get isUnavailable => statusCode == 503;
 
   @override
   String toString() => message;
@@ -97,10 +102,19 @@ class ApiClient {
     final message = data is Map && data['message'] is String
         ? data['message'] as String
         : 'Request failed ($code)';
+    //Retry hint comes from the body or the Retry-After header.
+    int? retryAfter;
+    if (data is Map && data['retryAfterSeconds'] is num) {
+      retryAfter = (data['retryAfterSeconds'] as num).toInt();
+    } else {
+      final header = res.headers.value('retry-after');
+      if (header != null) retryAfter = int.tryParse(header);
+    }
     throw ApiException(
       message,
       statusCode: code,
       details: data is Map ? data['details'] : null,
+      retryAfterSeconds: retryAfter,
     );
   }
 
